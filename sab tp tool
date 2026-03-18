@@ -1,0 +1,170 @@
+-- Скрипт с управлением через клавиатуру + визуальное меню
+local player = game.Players.LocalPlayer
+local savedPosition = nil
+local menuVisible = true
+
+-- Создание GUI
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local PosLabel = Instance.new("TextLabel")
+local SaveBtn = Instance.new("TextButton")
+local LoadBtn = Instance.new("TextButton")
+local CloseBtn = Instance.new("TextButton")
+local ToggleBtn = Instance.new("TextButton")
+
+-- Настройка GUI
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.new(0.15, 0.15, 0.15)
+MainFrame.BorderSizePixel = 2
+MainFrame.BorderColor3 = Color3.new(0, 1, 0)
+MainFrame.Position = UDim2.new(0.7, 0, 0.3, 0)
+MainFrame.Size = UDim2.new(0.25, 0, 0.3, 0)
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+Title.Parent = MainFrame
+Title.BackgroundColor3 = Color3.new(0, 0.5, 0)
+Title.Size = UDim2.new(1, 0, 0.2, 0)
+Title.Text = "TELEPORT MANAGER"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.TextScaled = true
+
+PosLabel.Parent = MainFrame
+PosLabel.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+PosLabel.Position = UDim2.new(0.1, 0, 0.25, 0)
+PosLabel.Size = UDim2.new(0.8, 0, 0.15, 0)
+PosLabel.Text = "No position saved"
+PosLabel.TextColor3 = Color3.new(1, 0, 0)
+PosLabel.TextScaled = true
+
+SaveBtn.Parent = MainFrame
+SaveBtn.BackgroundColor3 = Color3.new(0, 0.7, 0)
+SaveBtn.Position = UDim2.new(0.1, 0, 0.45, 0)
+SaveBtn.Size = UDim2.new(0.35, 0, 0.15, 0)
+SaveBtn.Text = "SAVE [P]"
+SaveBtn.TextColor3 = Color3.new(1, 1, 1)
+SaveBtn.TextScaled = true
+
+LoadBtn.Parent = MainFrame
+LoadBtn.BackgroundColor3 = Color3.new(0.7, 0.7, 0)
+LoadBtn.Position = UDim2.new(0.55, 0, 0.45, 0)
+LoadBtn.Size = UDim2.new(0.35, 0, 0.15, 0)
+LoadBtn.Text = "LOAD [O]"
+LoadBtn.TextColor3 = Color3.new(1, 1, 1)
+LoadBtn.TextScaled = true
+
+CloseBtn.Parent = MainFrame
+CloseBtn.BackgroundColor3 = Color3.new(0.8, 0, 0)
+CloseBtn.Position = UDim2.new(0.85, 0, 0.02, 0)
+CloseBtn.Size = UDim2.new(0.12, 0, 0.12, 0)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.new(1, 1, 1)
+CloseBtn.TextScaled = true
+
+ToggleBtn.Parent = ScreenGui
+ToggleBtn.BackgroundColor3 = Color3.new(0, 0.5, 0)
+ToggleBtn.Position = UDim2.new(0.9, 0, 0.02, 0)
+ToggleBtn.Size = UDim2.new(0.08, 0, 0.05, 0)
+ToggleBtn.Text = "MENU"
+ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+ToggleBtn.TextScaled = true
+ToggleBtn.Visible = false
+
+-- Функция обновления метки позиции
+local function updatePosLabel()
+    if savedPosition then
+        PosLabel.Text = string.format("Pos: X=%.1f Y=%.1f Z=%.1f", 
+            savedPosition.X, savedPosition.Y, savedPosition.Z)
+        PosLabel.TextColor3 = Color3.new(0, 1, 0)
+    else
+        PosLabel.Text = "No position saved"
+        PosLabel.TextColor3 = Color3.new(1, 0, 0)
+    end
+end
+
+-- Функция уведомления
+local function notify(msg, color)
+    local notification = Instance.new("TextLabel")
+    notification.Parent = ScreenGui
+    notification.BackgroundColor3 = color
+    notification.BackgroundTransparency = 0.3
+    notification.Position = UDim2.new(0.35, 0, 0.45, 0)
+    notification.Size = UDim2.new(0.3, 0, 0.1, 0)
+    notification.Text = msg
+    notification.TextColor3 = Color3.new(1, 1, 1)
+    notification.TextScaled = true
+    notification.ZIndex = 10
+    
+    game:GetService("TweenService"):Create(
+        notification,
+        TweenInfo.new(2),
+        {BackgroundTransparency = 1, TextTransparency = 1}
+    ):Play()
+    
+    wait(2)
+    notification:Destroy()
+end
+
+-- Сохранение
+local function savePosition()
+    local character = player.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        savedPosition = character.HumanoidRootPart.Position
+        updatePosLabel()
+        notify("✅ Position saved! (Press O to teleport)", Color3.new(0, 1, 0))
+        
+        -- Эффект на кнопке
+        SaveBtn.BackgroundColor3 = Color3.new(0, 1, 0)
+        wait(0.2)
+        SaveBtn.BackgroundColor3 = Color3.new(0, 0.7, 0)
+    end
+end
+
+-- Телепортация
+local function loadPosition()
+    if savedPosition then
+        local character = player.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            character.HumanoidRootPart.CFrame = CFrame.new(savedPosition)
+            notify("🌀 Teleported to saved position!", Color3.new(0, 1, 1))
+            
+            LoadBtn.BackgroundColor3 = Color3.new(1, 1, 0)
+            wait(0.2)
+            LoadBtn.BackgroundColor3 = Color3.new(0.7, 0.7, 0)
+        end
+    else
+        notify("❌ No position saved! Press P first", Color3.new(1, 0, 0))
+    end
+end
+
+-- Кнопки мыши
+SaveBtn.MouseButton1Click:Connect(savePosition)
+LoadBtn.MouseButton1Click:Connect(loadPosition)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    ToggleBtn.Visible = true
+end)
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = true
+    ToggleBtn.Visible = false
+end)
+
+-- Горячие клавиши
+game:GetService("UserInputService").InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.P then
+        savePosition()
+    elseif input.KeyCode == Enum.KeyCode.O then
+        loadPosition()
+    elseif input.KeyCode == Enum.KeyCode.H then
+        MainFrame.Visible = not MainFrame.Visible
+        ToggleBtn.Visible = not MainFrame.Visible
+    end
+end)
+
+print("Script loaded! Use P to save, O to teleport")
