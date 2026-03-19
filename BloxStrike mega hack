@@ -1,0 +1,318 @@
+-- BloxStrike Mega Hack: Wallbang + Infinite Ammo + Rapid Fire
+local player = game.Players.LocalPlayer
+local wallbangEnabled = false
+local infiniteAmmoEnabled = false
+local rapidFireEnabled = false
+local currentWeapon = nil
+
+-- Создание GUI
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local WallbangBtn = Instance.new("TextButton")
+local AmmoBtn = Instance.new("TextButton")
+local RapidBtn = Instance.new("TextButton")
+local Status = Instance.new("TextLabel")
+local CloseBtn = Instance.new("TextButton")
+
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.15)
+MainFrame.Position = UDim2.new(0.7, 0, 0.2, 0)
+MainFrame.Size = UDim2.new(0.25, 0, 0.35, 0)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.BorderSizePixel = 2
+MainFrame.BorderColor3 = Color3.new(0, 1, 1)
+
+Title.Parent = MainFrame
+Title.BackgroundColor3 = Color3.new(0, 0.5, 0.5)
+Title.Size = UDim2.new(1, 0, 0.15, 0)
+Title.Text = "⚡ BLOXSTRIKE MEGA HACK ⚡"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.TextScaled = true
+
+WallbangBtn.Parent = MainFrame
+WallbangBtn.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
+WallbangBtn.Position = UDim2.new(0.1, 0, 0.2, 0)
+WallbangBtn.Size = UDim2.new(0.8, 0, 0.15, 0)
+WallbangBtn.Text = "🔫 WALLBANG: OFF"
+WallbangBtn.TextColor3 = Color3.new(1, 0, 0)
+WallbangBtn.TextScaled = true
+
+AmmoBtn.Parent = MainFrame
+AmmoBtn.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
+AmmoBtn.Position = UDim2.new(0.1, 0, 0.4, 0)
+AmmoBtn.Size = UDim2.new(0.8, 0, 0.15, 0)
+AmmoBtn.Text = "📦 INFINITE AMMO: OFF"
+AmmoBtn.TextColor3 = Color3.new(1, 0, 0)
+AmmoBtn.TextScaled = true
+
+RapidBtn.Parent = MainFrame
+RapidBtn.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
+RapidBtn.Position = UDim2.new(0.1, 0, 0.6, 0)
+RapidBtn.Size = UDim2.new(0.8, 0, 0.15, 0)
+RapidBtn.Text = "⚡ RAPID FIRE: OFF"
+RapidBtn.TextColor3 = Color3.new(1, 0, 0)
+RapidBtn.TextScaled = true
+
+Status.Parent = MainFrame
+Status.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+Status.Position = UDim2.new(0.1, 0, 0.8, 0)
+Status.Size = UDim2.new(0.8, 0, 0.12, 0)
+Status.Text = "Готов"
+Status.TextColor3 = Color3.new(0, 1, 0)
+Status.TextScaled = true
+
+CloseBtn.Parent = MainFrame
+CloseBtn.BackgroundColor3 = Color3.new(1, 0, 0)
+CloseBtn.Position = UDim2.new(0.9, 0, 0.02, 0)
+CloseBtn.Size = UDim2.new(0.08, 0, 0.1, 0)
+CloseBtn.Text = "X"
+CloseBtn.TextScaled = true
+
+-- === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
+
+-- Поиск текущего оружия
+local function getCurrentWeapon()
+    local character = player.Character
+    if not character then return nil end
+    for _, tool in pairs(character:GetChildren()) do
+        if tool:IsA("Tool") then
+            return tool
+        end
+    end
+    return nil
+end
+
+-- Уведомления
+local function notify(msg, color)
+    Status.Text = msg
+    Status.TextColor3 = color or Color3.new(1, 1, 1)
+end
+
+-- === WALLBANG ===
+local function applyWallbang(weapon)
+    if not weapon then return false end
+    for _, script in pairs(weapon:GetDescendants()) do
+        if script:IsA("LocalScript") and (script.Name:lower():find("shoot") or script.Name:lower():find("fire")) then
+            -- Создаём модифицированный скрипт
+            local newScript = script:Clone()
+            newScript.Source = [[
+                -- Wallbang enabled
+                local player = game.Players.LocalPlayer
+                local tool = script.Parent
+                local oldEvent = tool:FindFirstChild("FireEvent") or tool:FindFirstChild("ShootEvent")
+                
+                -- Raycast игнорирующий стены
+                local function shoot()
+                    local character = player.Character
+                    if not character then return end
+                    local hrp = character:FindFirstChild("HumanoidRootPart")
+                    if not hrp then return end
+                    
+                    local camera = workspace.CurrentCamera
+                    local rayDir = camera.CFrame.LookVector * 1000
+                    
+                    -- Игнорируем все объекты, кроме игроков
+                    local ignoreList = {}
+                    for _, obj in pairs(workspace:GetDescendants()) do
+                        if obj:IsA("BasePart") and not obj:IsA("Player") and not obj:IsA("Tool") then
+                            table.insert(ignoreList, obj)
+                        end
+                    end
+                    
+                    local params = RaycastParams.new()
+                    params.FilterType = Enum.RaycastFilterType.Blacklist
+                    params.FilterDescendantsInstances = ignoreList
+                    
+                    local rayResult = workspace:Raycast(camera.CFrame.Position, rayDir, params)
+                    if rayResult then
+                        local hitPlayer = game.Players:GetPlayerFromCharacter(rayResult.Instance.Parent)
+                        if hitPlayer then
+                            -- Отправляем попадание на сервер
+                            if oldEvent then oldEvent:FireServer(hitPlayer, rayResult.Instance, rayResult.Position) end
+                        end
+                    end
+                end
+                
+                tool.Activated:Connect(shoot)
+            ]]
+            newScript.Disabled = false
+            newScript.Parent = weapon
+            script.Disabled = true
+            return true
+        end
+    end
+    return false
+end
+
+-- === INFINITE AMMO ===
+local function applyInfiniteAmmo(weapon)
+    if not weapon then return false end
+    local success = false
+    -- Ищем значения патронов (обычно IntValue или NumberValue)
+    for _, obj in pairs(weapon:GetDescendants()) do
+        if obj:IsA("IntValue") and (obj.Name:lower():find("ammo") or obj.Name:lower():find("clip") or obj.Name:lower():find("bullet")) then
+            obj.Value = 9999
+            obj:GetPropertyChangedSignal("Value"):Connect(function() obj.Value = 9999 end)
+            success = true
+        elseif obj:IsA("NumberValue") and (obj.Name:lower():find("ammo") or obj.Name:lower():find("clip") or obj.Name:lower():find("bullet")) then
+            obj.Value = 9999
+            obj:GetPropertyChangedSignal("Value"):Connect(function() obj.Value = 9999 end)
+            success = true
+        elseif obj:IsA("LocalScript") and obj.Source:lower():find("ammo") then
+            -- Отключаем скрипты, которые уменьшают патроны
+            obj.Disabled = true
+            success = true
+        end
+    end
+    
+    -- Если не нашли, пробуем изменить переменные в скриптах
+    for _, script in pairs(weapon:GetDescendants()) do
+        if script:IsA("LocalScript") then
+            local newSource = script.Source:gsub("ammo = ammo%-1", "ammo = ammo")
+            newSource = newSource:gsub("Ammo = Ammo%-1", "Ammo = Ammo")
+            newSource = newSource:gsub("clip = clip%-1", "clip = clip")
+            if newSource ~= script.Source then
+                script.Source = newSource
+                success = true
+            end
+        end
+    end
+    return success
+end
+
+-- === RAPID FIRE ===
+local function applyRapidFire(weapon)
+    if not weapon then return false end
+    local success = false
+    -- Убираем задержки в скриптах
+    for _, script in pairs(weapon:GetDescendants()) do
+        if script:IsA("LocalScript") then
+            local newSource = script.Source:gsub("wait%(.-%)", "wait(0)")
+            newSource = newSource:gsub("task.wait%(.-%)", "task.wait(0)")
+            if newSource ~= script.Source then
+                script.Source = newSource
+                success = true
+            end
+        end
+    end
+    
+    -- Дополнительно: спам кликами при зажатой кнопке
+    if not weapon:FindFirstChild("RapidFireHandler") then
+        local handler = Instance.new("BoolValue")
+        handler.Name = "RapidFireHandler"
+        handler.Parent = weapon
+        
+        local connection
+        local function startSpam()
+            connection = game:GetService("RunService").Heartbeat:Connect(function()
+                if weapon.Activated then
+                    weapon:Activate()
+                end
+            end)
+        end
+        
+        local function stopSpam()
+            if connection then connection:Disconnect() end
+        end
+        
+        weapon.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                startSpam()
+            end
+        end)
+        
+        weapon.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                stopSpam()
+            end
+        end)
+        success = true
+    end
+    return success
+end
+
+-- === ПРИМЕНЕНИЕ ВСЕХ ВКЛЮЧЁННЫХ МОДОВ К ОРУЖИЮ ===
+local function applyMods(weapon)
+    if not weapon then return end
+    if wallbangEnabled then applyWallbang(weapon) end
+    if infiniteAmmoEnabled then applyInfiniteAmmo(weapon) end
+    if rapidFireEnabled then applyRapidFire(weapon) end
+    notify("✅ Моды применены к " .. weapon.Name, Color3.new(0, 1, 0))
+end
+
+-- === ОБРАБОТЧИКИ КНОПОК ===
+WallbangBtn.MouseButton1Click:Connect(function()
+    wallbangEnabled = not wallbangEnabled
+    if wallbangEnabled then
+        WallbangBtn.Text = "🔫 WALLBANG: ON"
+        WallbangBtn.TextColor3 = Color3.new(0, 1, 0)
+    else
+        WallbangBtn.Text = "🔫 WALLBANG: OFF"
+        WallbangBtn.TextColor3 = Color3.new(1, 0, 0)
+    end
+    if currentWeapon then applyMods(currentWeapon) end
+end)
+
+AmmoBtn.MouseButton1Click:Connect(function()
+    infiniteAmmoEnabled = not infiniteAmmoEnabled
+    if infiniteAmmoEnabled then
+        AmmoBtn.Text = "📦 INFINITE AMMO: ON"
+        AmmoBtn.TextColor3 = Color3.new(0, 1, 0)
+    else
+        AmmoBtn.Text = "📦 INFINITE AMMO: OFF"
+        AmmoBtn.TextColor3 = Color3.new(1, 0, 0)
+    end
+    if currentWeapon then applyMods(currentWeapon) end
+end)
+
+RapidBtn.MouseButton1Click:Connect(function()
+    rapidFireEnabled = not rapidFireEnabled
+    if rapidFireEnabled then
+        RapidBtn.Text = "⚡ RAPID FIRE: ON"
+        RapidBtn.TextColor3 = Color3.new(0, 1, 0)
+    else
+        RapidBtn.Text = "⚡ RAPID FIRE: OFF"
+        RapidBtn.TextColor3 = Color3.new(1, 0, 0)
+    end
+    if currentWeapon then applyMods(currentWeapon) end
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- === ОТСЛЕЖИВАНИЕ СМЕНЫ ОРУЖИЯ ===
+player.CharacterAdded:Connect(function()
+    wait(1)
+    currentWeapon = getCurrentWeapon()
+    if currentWeapon then applyMods(currentWeapon) end
+end)
+
+player:GetPropertyChangedSignal("Character"):Connect(function()
+    wait(1)
+    currentWeapon = getCurrentWeapon()
+    if currentWeapon then applyMods(currentWeapon) end
+end)
+
+game:GetService("UserInputService").InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        -- При каждом клике проверяем, не сменилось ли оружие
+        local newWeapon = getCurrentWeapon()
+        if newWeapon and newWeapon ~= currentWeapon then
+            currentWeapon = newWeapon
+            applyMods(currentWeapon)
+        end
+    end
+end)
+
+-- Начальная проверка
+wait(1)
+currentWeapon = getCurrentWeapon()
+if currentWeapon then applyMods(currentWeapon) end
+
+notify("✅ Скрипт загружен! Включи нужные опции.", Color3.new(0, 1, 0))
