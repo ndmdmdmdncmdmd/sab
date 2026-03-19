@@ -1,0 +1,239 @@
+-- Скрипт для телепортации сквозь стены с регулировкой расстояния
+local player = game.Players.LocalPlayer
+local teleportDistance = 5 -- стандартное расстояние
+local noclipEnabled = false
+
+-- Создание GUI
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local DistanceSlider = Instance.new("TextButton") -- Для простоты используем кнопку
+local DistanceValue = Instance.new("TextLabel")
+local TeleportForward = Instance.new("TextButton")
+local TeleportBackward = Instance.new("TextButton")
+local TeleportUp = Instance.new("TextButton")
+local TeleportDown = Instance.new("TextButton")
+local NoclipBtn = Instance.new("TextButton")
+local Status = Instance.new("TextLabel")
+local CloseBtn = Instance.new("TextButton")
+
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.15)
+MainFrame.Position = UDim2.new(0.3, 0, 0.25, 0)
+MainFrame.Size = UDim2.new(0.4, 0, 0.5, 0)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.BorderSizePixel = 2
+MainFrame.BorderColor3 = Color3.new(0, 1, 1)
+
+Title.Parent = MainFrame
+Title.BackgroundColor3 = Color3.new(0, 0.5, 0.5)
+Title.Size = UDim2.new(1, 0, 0.15, 0)
+Title.Text = "🚀 WALL WALKER 🚀"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.TextScaled = true
+
+-- Регулировка расстояния
+local distanceFrame = Instance.new("Frame")
+distanceFrame.Parent = MainFrame
+distanceFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+distanceFrame.Position = UDim2.new(0.1, 0, 0.18, 0)
+distanceFrame.Size = UDim2.new(0.8, 0, 0.12, 0)
+
+DistanceValue.Parent = distanceFrame
+DistanceValue.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
+DistanceValue.Position = UDim2.new(0.3, 0, 0.1, 0)
+DistanceValue.Size = UDim2.new(0.4, 0, 0.8, 0)
+DistanceValue.Text = "📏 " .. teleportDistance .. " studs"
+DistanceValue.TextColor3 = Color3.new(1, 1, 0)
+DistanceValue.TextScaled = true
+
+local MinusBtn = Instance.new("TextButton")
+MinusBtn.Parent = distanceFrame
+MinusBtn.BackgroundColor3 = Color3.new(0.8, 0.2, 0.2)
+MinusBtn.Position = UDim2.new(0.05, 0, 0.1, 0)
+MinusBtn.Size = UDim2.new(0.2, 0, 0.8, 0)
+MinusBtn.Text = "-"
+MinusBtn.TextColor3 = Color3.new(1, 1, 1)
+MinusBtn.TextScaled = true
+
+local PlusBtn = Instance.new("TextButton")
+PlusBtn.Parent = distanceFrame
+PlusBtn.BackgroundColor3 = Color3.new(0.2, 0.8, 0.2)
+PlusBtn.Position = UDim2.new(0.75, 0, 0.1, 0)
+PlusBtn.Size = UDim2.new(0.2, 0, 0.8, 0)
+PlusBtn.Text = "+"
+PlusBtn.TextColor3 = Color3.new(1, 1, 1)
+PlusBtn.TextScaled = true
+
+-- Кнопки телепортации
+TeleportForward.Parent = MainFrame
+TeleportForward.BackgroundColor3 = Color3.new(0, 0.7, 0.7)
+TeleportForward.Position = UDim2.new(0.25, 0, 0.35, 0)
+TeleportForward.Size = UDim2.new(0.5, 0, 0.1, 0)
+TeleportForward.Text = "⬆ ВПЕРЕД [W]"
+TeleportForward.TextColor3 = Color3.new(1, 1, 1)
+TeleportForward.TextScaled = true
+
+TeleportBackward.Parent = MainFrame
+TeleportBackward.BackgroundColor3 = Color3.new(0.7, 0.3, 0)
+TeleportBackward.Position = UDim2.new(0.25, 0, 0.48, 0)
+TeleportBackward.Size = UDim2.new(0.5, 0, 0.1, 0)
+TeleportBackward.Text = "⬇ НАЗАД [S]"
+TeleportBackward.TextColor3 = Color3.new(1, 1, 1)
+TeleportBackward.TextScaled = true
+
+TeleportUp.Parent = MainFrame
+TeleportUp.BackgroundColor3 = Color3.new(0.7, 0, 0.7)
+TeleportUp.Position = UDim2.new(0.1, 0, 0.61, 0)
+TeleportUp.Size = UDim2.new(0.35, 0, 0.1, 0)
+TeleportUp.Text = "⬆ ВВЕРХ [E]"
+TeleportUp.TextColor3 = Color3.new(1, 1, 1)
+TeleportUp.TextScaled = true
+
+TeleportDown.Parent = MainFrame
+TeleportDown.BackgroundColor3 = Color3.new(0.7, 0.7, 0)
+TeleportDown.Position = UDim2.new(0.55, 0, 0.61, 0)
+TeleportDown.Size = UDim2.new(0.35, 0, 0.1, 0)
+TeleportDown.Text = "⬇ ВНИЗ [Q]"
+TeleportDown.TextColor3 = Color3.new(1, 1, 1)
+TeleportDown.TextScaled = true
+
+-- Кнопка Noclip
+NoclipBtn.Parent = MainFrame
+NoclipBtn.BackgroundColor3 = Color3.new(0.5, 0, 0.5)
+NoclipBtn.Position = UDim2.new(0.25, 0, 0.74, 0)
+NoclipBtn.Size = UDim2.new(0.5, 0, 0.1, 0)
+NoclipBtn.Text = "🚫 NOCLIP OFF"
+NoclipBtn.TextColor3 = Color3.new(1, 1, 1)
+NoclipBtn.TextScaled = true
+
+Status.Parent = MainFrame
+Status.BackgroundColor3 = Color3.new(0.15, 0.15, 0.15)
+Status.Position = UDim2.new(0.1, 0, 0.87, 0)
+Status.Size = UDim2.new(0.8, 0, 0.08, 0)
+Status.Text = "Готов. Расстояние: 5 studs"
+Status.TextColor3 = Color3.new(0, 1, 0)
+Status.TextScaled = true
+
+CloseBtn.Parent = MainFrame
+CloseBtn.BackgroundColor3 = Color3.new(1, 0, 0)
+CloseBtn.Position = UDim2.new(0.92, 0, 0.02, 0)
+CloseBtn.Size = UDim2.new(0.06, 0, 0.08, 0)
+CloseBtn.Text = "X"
+CloseBtn.TextScaled = true
+
+-- Функция телепортации
+local function teleport(direction)
+    local character = player.Character
+    if not character then return end
+    
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    local newPosition = hrp.Position
+    
+    if direction == "forward" then
+        newPosition = hrp.Position + hrp.CFrame.LookVector * teleportDistance
+    elseif direction == "backward" then
+        newPosition = hrp.Position - hrp.CFrame.LookVector * teleportDistance
+    elseif direction == "up" then
+        newPosition = hrp.Position + Vector3.new(0, teleportDistance, 0)
+    elseif direction == "down" then
+        newPosition = hrp.Position - Vector3.new(0, teleportDistance, 0)
+    end
+    
+    -- Проверка на стены (опционально, можно отключить если хотите всегда проходить)
+    if noclipEnabled then
+        -- С отключенной физикой проходим всегда
+        hrp.CFrame = CFrame.new(newPosition)
+        Status.Text = "✅ Телепорт (noclip): " .. teleportDistance .. " studs"
+    else
+        -- Пытаемся телепортироваться даже сквозь стены (игнорируем коллизию)
+        hrp.CFrame = CFrame.new(newPosition)
+        Status.Text = "✅ Телепорт сквозь стены: " .. teleportDistance .. " studs"
+    end
+    
+    -- Визуальный эффект
+    Status.TextColor3 = Color3.new(0, 1, 0)
+    wait(0.5)
+    Status.TextColor3 = Color3.new(1, 1, 1)
+end
+
+-- Noclip функция
+local function toggleNoclip()
+    noclipEnabled = not noclipEnabled
+    
+    if noclipEnabled then
+        NoclipBtn.Text = "🚫 NOCLIP ON"
+        NoclipBtn.BackgroundColor3 = Color3.new(0, 0.8, 0)
+        Status.Text = "Noclip включен - проходим сквозь всё"
+        
+        -- Постоянный noclip
+        spawn(function()
+            while noclipEnabled do
+                local character = player.Character
+                if character then
+                    for _, part in pairs(character:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+                wait(0.1)
+            end
+        end)
+    else
+        NoclipBtn.Text = "🚫 NOCLIP OFF"
+        NoclipBtn.BackgroundColor3 = Color3.new(0.5, 0, 0.5)
+        Status.Text = "Noclip выключен"
+    end
+end
+
+-- Управление расстоянием
+MinusBtn.MouseButton1Click:Connect(function()
+    if teleportDistance > 1 then
+        teleportDistance = teleportDistance - 1
+        DistanceValue.Text = "📏 " .. teleportDistance .. " studs"
+        Status.Text = "Расстояние: " .. teleportDistance .. " studs"
+    end
+end)
+
+PlusBtn.MouseButton1Click:Connect(function()
+    if teleportDistance < 15 then
+        teleportDistance = teleportDistance + 1
+        DistanceValue.Text = "📏 " .. teleportDistance .. " studs"
+        Status.Text = "Расстояние: " .. teleportDistance .. " studs"
+    end
+end)
+
+-- Кнопки мыши
+TeleportForward.MouseButton1Click:Connect(function() teleport("forward") end)
+TeleportBackward.MouseButton1Click:Connect(function() teleport("backward") end)
+TeleportUp.MouseButton1Click:Connect(function() teleport("up") end)
+TeleportDown.MouseButton1Click:Connect(function() teleport("down") end)
+NoclipBtn.MouseButton1Click:Connect(toggleNoclip)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- Горячие клавиши
+game:GetService("UserInputService").InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.W then
+        teleport("forward")
+    elseif input.KeyCode == Enum.KeyCode.S then
+        teleport("backward")
+    elseif input.KeyCode == Enum.KeyCode.E then
+        teleport("up")
+    elseif input.KeyCode == Enum.KeyCode.Q then
+        teleport("down")
+    elseif input.KeyCode == Enum.KeyCode.N then
+        toggleNoclip()
+    end
+end)
+
+print("Wall Walker загружен! W/S/E/Q - телепорт, N - noclip")
