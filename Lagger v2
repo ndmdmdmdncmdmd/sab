@@ -1,0 +1,877 @@
+--[[
+    ULTIMATE LAG MACHINE v10 - MEGA ULTRA
+    - Блюр на фон
+    - Летающие светяшки в меню
+    - Настройки цвета
+    - Русский/English язык
+    - Полная очистка по STOP
+]]
+
+local player = game.Players.LocalPlayer
+local lagging = false
+local selectedTarget = nil
+local createdParts = {}
+local blurEffect = nil
+local menuOpen = true
+local noclipActive = false
+local currentColor = 1 -- 1: фиолетовый, 2: синий, 3: красный, 4: голубой, 5: золотой, 6: рандом
+local language = "RU" -- RU или EN
+local stars = {} -- массив для светяшек
+
+-- ========== ПЕРЕВОДЫ ==========
+local translations = {
+    RU = {
+        title = "⚡ MEGA LAG MACHINE v10 ⚡",
+        players = "🎮 ИГРОКИ (нажми для выбора цели)",
+        target = "🎯 ЦЕЛЬ: НЕ ВЫБРАНА",
+        noclip = "🚪 ПРОХОД ЧЕРЕЗ НАШИ БЛОКИ: ВЫКЛ",
+        noclip_on = "🚪 ПРОХОД ЧЕРЕЗ НАШИ БЛОКИ: ВКЛ",
+        start = "🔥 START LAG",
+        stop = "⏹ STOP + ОЧИСТКА",
+        status_ready = "⚡ ГОТОВ К РАБОТЕ",
+        status_select = "✅ ЦЕЛЬ ВЫБРАНА. НАЖМИ START",
+        status_noclip_on = "✅ ЦЕЛЬ ПРОХОДИТ ЧЕРЕЗ НАШИ БЛОКИ",
+        status_noclip_off = "❌ ПРОХОД ЧЕРЕЗ БЛОКИ ОТКЛЮЧЕН",
+        status_no_target = "⚠️ СНАЧАЛА ВЫБЕРИ ЦЕЛЬ",
+        status_cleared = "🧹 УДАЛЕНО",
+        status_lagging = "🔥 MEGA LAG НА",
+        status_stopped = "⏹ ЛАГИ ОСТАНОВЛЕНЫ",
+        status_target_left = "⚠️ ЦЕЛЬ ПОКИНУЛА ИГРУ",
+        status_error = "❌ СНАЧАЛА ВЫБЕРИТЕ ЦЕЛЬ!",
+        clear = "🧹 ОЧИСТИТЬ ВСЕ ПАРТЫ",
+        parts_count = "📊 ПАРТОВ СОЗДАНО",
+        settings = "⚙️ НАСТРОЙКИ",
+        color = "🎨 ЦВЕТ ПАРТОВ",
+        color_purple = "💜 ФИОЛЕТОВЫЙ",
+        color_blue = "💙 СИНИЙ",
+        color_red = "❤️ КРАСНЫЙ",
+        color_cyan = "💚 ГОЛУБОЙ",
+        color_gold = "💛 ЗОЛОТОЙ",
+        color_random = "🌈 РАНДОМ",
+        language_btn = "🌐 ЯЗЫК: РУС",
+        language_en = "🌐 ЯЗЫК: ENG",
+    },
+    EN = {
+        title = "⚡ MEGA LAG MACHINE v10 ⚡",
+        players = "🎮 PLAYERS (click to select target)",
+        target = "🎯 TARGET: NOT SELECTED",
+        noclip = "🚪 PASS THROUGH OUR BLOCKS: OFF",
+        noclip_on = "🚪 PASS THROUGH OUR BLOCKS: ON",
+        start = "🔥 START LAG",
+        stop = "⏹ STOP + CLEAR",
+        status_ready = "⚡ READY TO WORK",
+        status_select = "✅ TARGET SELECTED. PRESS START",
+        status_noclip_on = "✅ TARGET PASSES THROUGH OUR BLOCKS",
+        status_noclip_off = "❌ PASS THROUGH BLOCKS DISABLED",
+        status_no_target = "⚠️ SELECT A TARGET FIRST",
+        status_cleared = "🧹 REMOVED",
+        status_lagging = "🔥 MEGA LAG ON",
+        status_stopped = "⏹ LAG STOPPED",
+        status_target_left = "⚠️ TARGET LEFT THE GAME",
+        status_error = "❌ SELECT A TARGET FIRST!",
+        clear = "🧹 CLEAR ALL PARTS",
+        parts_count = "📊 PARTS CREATED",
+        settings = "⚙️ SETTINGS",
+        color = "🎨 PART COLOR",
+        color_purple = "💜 PURPLE",
+        color_blue = "💙 BLUE",
+        color_red = "❤️ RED",
+        color_cyan = "💚 CYAN",
+        color_gold = "💛 GOLD",
+        color_random = "🌈 RANDOM",
+        language_btn = "🌐 LANGUAGE: RUS",
+        language_ru = "🌐 LANGUAGE: ENG",
+    }
+}
+
+local function getText(key)
+    return translations[language][key]
+end
+
+-- ========== СОЗДАНИЕ BLUR ЭФФЕКТА НА ФОН ==========
+local function createBlurEffect()
+    local lighting = game:GetService("Lighting")
+    blurEffect = lighting:FindFirstChild("BlurEffect")
+    
+    if not blurEffect then
+        blurEffect = Instance.new("BlurEffect")
+        blurEffect.Name = "BlurEffect"
+        blurEffect.Size = 0
+        blurEffect.Parent = lighting
+    end
+    return blurEffect
+end
+
+local function showBlur(duration, targetSize)
+    duration = duration or 0.3
+    targetSize = targetSize or 12
+    
+    if not blurEffect then
+        createBlurEffect()
+    end
+    
+    local tweenService = game:GetService("TweenService")
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local tween = tweenService:Create(blurEffect, tweenInfo, {Size = targetSize})
+    tween:Play()
+end
+
+local function hideBlur(duration)
+    duration = duration or 0.3
+    
+    if blurEffect then
+        local tweenService = game:GetService("TweenService")
+        local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        local tween = tweenService:Create(blurEffect, tweenInfo, {Size = 0})
+        tween:Play()
+    end
+end
+
+-- ========== АНТИ-ДЕТЕКТ ==========
+local function antiDetect()
+    script.Name = "ParticleEffect_" .. math.random(1000, 9999)
+    local fakeGui = Instance.new("ScreenGui")
+    fakeGui.Name = "SystemUI_" .. math.random(1000, 9999)
+    fakeGui.Parent = player:WaitForChild("PlayerGui")
+    fakeGui.ResetOnSpawn = false
+    return fakeGui
+end
+
+-- ========== ЛЕТАЮЩИЕ СВЕТЯШКИ В МЕНЮ ==========
+local function createFloatingStar(parent)
+    local star = Instance.new("TextLabel")
+    star.Size = UDim2.new(0, math.random(15, 25), 0, math.random(15, 25))
+    star.Position = UDim2.new(math.random(), 0, -0.1, 0)
+    star.BackgroundColor3 = Color3.new(1, 1, 1)
+    star.BackgroundTransparency = math.random(30, 70) / 100
+    star.Text = "✨"
+    star.TextColor3 = Color3.new(1, 1, 0.5)
+    star.TextSize = math.random(12, 20)
+    star.TextScaled = true
+    star.Font = Enum.Font.Gotham
+    star.Parent = parent
+    
+    local speed = math.random(20, 50) / 100
+    local rotation = math.random(-180, 180)
+    
+    table.insert(stars, {star = star, speed = speed, rotation = rotation})
+    
+    return star
+end
+
+-- Анимация звёзд
+local function animateStars()
+    spawn(function()
+        while true do
+            for i = #stars, 1, -1 do
+                local data = stars[i]
+                if data and data.star and data.star.Parent then
+                    local newY = data.star.Position.Y.Scale + (data.speed / 100)
+                    data.star.Position = UDim2.new(data.star.Position.X.Scale, 0, newY, 0)
+                    data.star.Rotation = data.star.Rotation + data.rotation / 10
+                    
+                    -- Если звезда ушла за нижний край, удаляем
+                    if newY > 1.1 then
+                        data.star:Destroy()
+                        table.remove(stars, i)
+                    end
+                else
+                    table.remove(stars, i)
+                end
+            end
+            wait(0.05)
+        end
+    end)
+end
+
+-- Создание новых звёзд
+local function spawnStars(parent)
+    spawn(function()
+        while parent and parent.Parent do
+            if math.random(1, 100) > 70 then
+                createFloatingStar(parent)
+            end
+            wait(0.5)
+        end
+    end)
+end
+
+-- ========== СОЗДАНИЕ GUI ==========
+local gui = antiDetect()
+createBlurEffect()
+
+-- КНОПКА ОТКРЫТИЯ МЕНЮ
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 65, 0, 65)
+toggleButton.Position = UDim2.new(0, 10, 0.5, -32)
+toggleButton.BackgroundColor3 = Color3.new(0.7, 0, 1)
+toggleButton.Text = "⚡"
+toggleButton.TextColor3 = Color3.new(1, 1, 1)
+toggleButton.TextSize = 45
+toggleButton.BorderSizePixel = 3
+toggleButton.BorderColor3 = Color3.new(1, 0, 1)
+toggleButton.Parent = gui
+
+-- Основное окно (прозрачное для звёзд)
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 500, 0, 650)
+mainFrame.Position = UDim2.new(0.5, -250, 0.5, -325)
+mainFrame.BackgroundColor3 = Color3.new(0.05, 0.05, 0.1)
+mainFrame.BackgroundTransparency = 0.15
+mainFrame.BorderSizePixel = 3
+mainFrame.BorderColor3 = Color3.new(1, 0, 1)
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Visible = true
+mainFrame.Parent = gui
+
+-- Фрейм для звёзд (сверху)
+local starFrame = Instance.new("Frame")
+starFrame.Size = UDim2.new(1, 0, 1, 0)
+starFrame.BackgroundTransparency = 1
+starFrame.Parent = mainFrame
+
+-- Запускаем звёзды
+spawnStars(starFrame)
+animateStars()
+
+-- Заголовок
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 60)
+title.BackgroundColor3 = Color3.new(0.4, 0, 0.6)
+title.BackgroundTransparency = 0.3
+title.Text = getText("title")
+title.TextColor3 = Color3.new(1, 0.5, 1)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+title.Parent = mainFrame
+
+-- Кнопки управления окном
+local minimizeBtn = Instance.new("TextButton")
+minimizeBtn.Size = UDim2.new(0, 35, 0, 35)
+minimizeBtn.Position = UDim2.new(1, -80, 0, 12)
+minimizeBtn.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
+minimizeBtn.Text = "−"
+minimizeBtn.TextColor3 = Color3.new(1, 1, 1)
+minimizeBtn.TextScaled = true
+minimizeBtn.Parent = mainFrame
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 35, 0, 35)
+closeBtn.Position = UDim2.new(1, -40, 0, 12)
+closeBtn.BackgroundColor3 = Color3.new(1, 0, 0)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.TextScaled = true
+closeBtn.Parent = mainFrame
+
+-- Контент меню
+local menuContent = Instance.new("ScrollingFrame")
+menuContent.Size = UDim2.new(1, 0, 1, -60)
+menuContent.Position = UDim2.new(0, 0, 0, 60)
+menuContent.BackgroundTransparency = 1
+menuContent.CanvasSize = UDim2.new(0, 0, 0, 750)
+menuContent.ScrollBarThickness = 8
+menuContent.Parent = mainFrame
+
+local contentLayout = Instance.new("UIListLayout")
+contentLayout.Parent = menuContent
+contentLayout.Spacing = 8
+contentLayout.Padding = UDim.new(0, 10)
+
+-- ========== СОЗДАНИЕ ЭЛЕМЕНТОВ МЕНЮ ==========
+-- Заголовок списка
+local listTitle = Instance.new("TextLabel")
+listTitle.Size = UDim2.new(0.9, 0, 0, 40)
+listTitle.BackgroundColor3 = Color3.new(0.2, 0.2, 0.3)
+listTitle.Text = getText("players")
+listTitle.TextColor3 = Color3.new(1, 1, 0)
+listTitle.TextScaled = true
+listTitle.Parent = menuContent
+
+-- Список игроков
+local playerList = Instance.new("ScrollingFrame")
+playerList.Size = UDim2.new(0.9, 0, 0, 150)
+playerList.BackgroundColor3 = Color3.new(0.1, 0.1, 0.15)
+playerList.BorderSizePixel = 2
+playerList.BorderColor3 = Color3.new(1, 0, 1)
+playerList.Parent = menuContent
+
+local playerListLayout = Instance.new("UIListLayout")
+playerListLayout.Parent = playerList
+playerListLayout.SortOrder = Enum.SortOrder.Name
+
+-- Информация о цели
+local targetLabel = Instance.new("TextLabel")
+targetLabel.Size = UDim2.new(0.9, 0, 0, 45)
+targetLabel.BackgroundColor3 = Color3.new(0.15, 0.15, 0.25)
+targetLabel.Text = getText("target")
+targetLabel.TextColor3 = Color3.new(1, 1, 0)
+targetLabel.TextScaled = true
+targetLabel.Font = Enum.Font.GothamBold
+targetLabel.Parent = menuContent
+
+-- Кнопка прохода через блоки
+local noclipBtn = Instance.new("TextButton")
+noclipBtn.Size = UDim2.new(0.9, 0, 0, 50)
+noclipBtn.BackgroundColor3 = Color3.new(0.3, 0.3, 0.8)
+noclipBtn.Text = getText("noclip")
+noclipBtn.TextColor3 = Color3.new(1, 1, 1)
+noclipBtn.TextScaled = true
+noclipBtn.Parent = menuContent
+
+-- ========== НАСТРОЙКИ ==========
+local settingsFrame = Instance.new("Frame")
+settingsFrame.Size = UDim2.new(0.9, 0, 0, 0)
+settingsFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.25)
+settingsFrame.BackgroundTransparency = 0.5
+settingsFrame.BorderSizePixel = 1
+settingsFrame.BorderColor3 = Color3.new(1, 0, 1)
+settingsFrame.Parent = menuContent
+
+local settingsTitle = Instance.new("TextLabel")
+settingsTitle.Size = UDim2.new(1, 0, 0, 35)
+settingsTitle.BackgroundColor3 = Color3.new(0.3, 0, 0.5)
+settingsTitle.Text = getText("settings")
+settingsTitle.TextColor3 = Color3.new(1, 1, 0)
+settingsTitle.TextScaled = true
+settingsTitle.Parent = settingsFrame
+
+-- Кнопка выбора цвета
+local colorBtn = Instance.new("TextButton")
+colorBtn.Size = UDim2.new(0.44, 0, 0, 45)
+colorBtn.Position = UDim2.new(0.05, 0, 0, 40)
+colorBtn.BackgroundColor3 = Color3.new(0.3, 0.2, 0.5)
+colorBtn.Text = getText("color") .. ": " .. getText("color_purple")
+colorBtn.TextColor3 = Color3.new(1, 1, 1)
+colorBtn.TextScaled = true
+colorBtn.Parent = settingsFrame
+
+-- Кнопка языка
+local langBtn = Instance.new("TextButton")
+langBtn.Size = UDim2.new(0.44, 0, 0, 45)
+langBtn.Position = UDim2.new(0.51, 0, 0, 40)
+langBtn.BackgroundColor3 = Color3.new(0.2, 0.4, 0.6)
+langBtn.Text = getText("language_btn")
+langBtn.TextColor3 = Color3.new(1, 1, 1)
+langBtn.TextScaled = true
+langBtn.Parent = settingsFrame
+
+-- Обновляем высоту фрейма настроек
+settingsFrame.Size = UDim2.new(0.9, 0, 0, 100)
+
+-- Кнопка START
+local startBtn = Instance.new("TextButton")
+startBtn.Size = UDim2.new(0.44, 0, 0, 55)
+startBtn.BackgroundColor3 = Color3.new(1, 0, 0)
+startBtn.Text = getText("start")
+startBtn.TextColor3 = Color3.new(1, 1, 1)
+startBtn.TextScaled = true
+startBtn.Parent = menuContent
+
+-- Кнопка STOP
+local stopBtn = Instance.new("TextButton")
+stopBtn.Size = UDim2.new(0.44, 0, 0, 55)
+stopBtn.BackgroundColor3 = Color3.new(0.5, 0, 0)
+stopBtn.Text = getText("stop")
+stopBtn.TextColor3 = Color3.new(1, 1, 1)
+stopBtn.TextScaled = true
+stopBtn.Parent = menuContent
+
+-- Статус
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(0.9, 0, 0, 50)
+statusLabel.BackgroundColor3 = Color3.new(0, 0, 0)
+statusLabel.BackgroundTransparency = 0.4
+statusLabel.Text = getText("status_ready")
+statusLabel.TextColor3 = Color3.new(0, 1, 0)
+statusLabel.TextScaled = true
+statusLabel.Font = Enum.Font.GothamBold
+statusLabel.Parent = menuContent
+
+-- Кнопка очистки
+local clearBtn = Instance.new("TextButton")
+clearBtn.Size = UDim2.new(0.9, 0, 0, 50)
+clearBtn.BackgroundColor3 = Color3.new(0.5, 0.5, 0)
+clearBtn.Text = getText("clear")
+clearBtn.TextColor3 = Color3.new(1, 1, 1)
+clearBtn.TextScaled = true
+clearBtn.Parent = menuContent
+
+-- Информация о партах
+local partsInfo = Instance.new("TextLabel")
+partsInfo.Size = UDim2.new(0.9, 0, 0, 35)
+partsInfo.BackgroundColor3 = Color3.new(0.1, 0.1, 0.2)
+partsInfo.Text = getText("parts_count") .. ": 0"
+partsInfo.TextColor3 = Color3.new(1, 1, 0)
+partsInfo.TextScaled = true
+partsInfo.Parent = menuContent
+
+-- ========== ФУНКЦИЯ ПОЛУЧЕНИЯ ЦВЕТА ==========
+local function getCurrentColor()
+    local colors = {
+        {Color3.new(1, 0.2, 1), "Bright violet", "💜"},
+        {Color3.new(0, 0.5, 1), "Electric blue", "💙"},
+        {Color3.new(1, 0.2, 0), "Really red", "❤️"},
+        {Color3.new(0, 1, 1), "Cyan", "💚"},
+        {Color3.new(1, 0.8, 0), "Gold", "💛"},
+    }
+    
+    if currentColor == 6 then
+        return colors[math.random(#colors)]
+    end
+    return colors[currentColor]
+end
+
+-- ========== МЕГА МЕТОД ==========
+local function createMegaEffect(target)
+    if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then
+        return
+    end
+    
+    local targetPos = target.Character.HumanoidRootPart.Position
+    local colorData = getCurrentColor()
+    local mainColor = colorData[1]
+    local brickColor = BrickColor.new(colorData[2])
+    
+    -- Создаём множество разных эффектов
+    
+    -- 1. Сферы (5 штук)
+    for i = 1, 5 do
+        local sphere = Instance.new("Part")
+        sphere.Size = Vector3.new(2.5, 2.5, 2.5)
+        sphere.Shape = Enum.PartType.Ball
+        sphere.BrickColor = brickColor
+        sphere.Material = Enum.Material.Neon
+        sphere.Anchored = true
+        sphere.CanCollide = true
+        sphere.Parent = workspace
+        sphere:SetAttribute("IsOurPart", true)
+        
+        local light = Instance.new("PointLight")
+        light.Color = mainColor
+        light.Range = 20
+        light.Brightness = 3
+        light.Parent = sphere
+        
+        sphere.Position = targetPos + Vector3.new(
+            math.random(-25, 25),
+            math.random(-5, 20),
+            math.random(-25, 25)
+        )
+        sphere.RotVelocity = Vector3.new(math.random(-50, 50), math.random(-50, 50), math.random(-50, 50))
+        table.insert(createdParts, sphere)
+    end
+    
+    -- 2. Столбы (3 штуки)
+    for i = 1, 3 do
+        local pillar = Instance.new("Part")
+        pillar.Size = Vector3.new(1.2, 25, 1.2)
+        pillar.BrickColor = brickColor
+        pillar.Material = Enum.Material.Neon
+        pillar.Anchored = true
+        pillar.CanCollide = true
+        pillar.Parent = workspace
+        pillar:SetAttribute("IsOurPart", true)
+        
+        local light = Instance.new("PointLight")
+        light.Color = mainColor
+        light.Range = 25
+        light.Brightness = 3.5
+        light.Parent = pillar
+        
+        pillar.Position = targetPos + Vector3.new(
+            math.random(-20, 20),
+            10,
+            math.random(-20, 20)
+        )
+        table.insert(createdParts, pillar)
+    end
+    
+    -- 3. Кристаллы (6 штук)
+    for i = 1, 6 do
+        local crystal = Instance.new("Part")
+        crystal.Size = Vector3.new(1.2, 1.2, 1.2)
+        crystal.Shape = Enum.PartType.Block
+        crystal.BrickColor = brickColor
+        crystal.Material = Enum.Material.Neon
+        crystal.Anchored = true
+        crystal.CanCollide = true
+        crystal.Parent = workspace
+        crystal:SetAttribute("IsOurPart", true)
+        
+        local light = Instance.new("PointLight")
+        light.Color = mainColor
+        light.Range = 16
+        light.Brightness = 3
+        light.Parent = crystal
+        
+        crystal.Position = targetPos + Vector3.new(
+            math.random(-18, 18),
+            math.random(0, 12),
+            math.random(-18, 18)
+        )
+        crystal.RotVelocity = Vector3.new(math.random(-30, 30), math.random(-30, 30), math.random(-30, 30))
+        table.insert(createdParts, crystal)
+    end
+    
+    -- 4. Кольца (2 штуки)
+    for i = 1, 2 do
+        local ring = Instance.new("Part")
+        ring.Size = Vector3.new(12, 0.8, 12)
+        ring.BrickColor = brickColor
+        ring.Material = Enum.Material.Neon
+        ring.Anchored = true
+        ring.CanCollide = true
+        ring.Parent = workspace
+        ring:SetAttribute("IsOurPart", true)
+        
+        local light = Instance.new("PointLight")
+        light.Color = mainColor
+        light.Range = 24
+        light.Brightness = 3
+        light.Parent = ring
+        
+        ring.Position = targetPos + Vector3.new(
+            math.random(-8, 8),
+            math.random(-3, 10),
+            math.random(-8, 8)
+        )
+        ring.RotVelocity = Vector3.new(0, math.random(100, 200), 0)
+        table.insert(createdParts, ring)
+    end
+    
+    partsInfo.Text = getText("parts_count") .. ": " .. #createdParts
+end
+
+-- ========== ОСНОВНОЙ ЦИКЛ ==========
+local function startLagging()
+    if not selectedTarget then
+        statusLabel.Text = getText("status_error")
+        statusLabel.TextColor3 = Color3.new(1, 0, 0)
+        return
+    end
+    
+    if lagging then
+        stopAndClear()
+        wait(0.5)
+    end
+    
+    lagging = true
+    startBtn.BackgroundColor3 = Color3.new(0, 1, 0)
+    statusLabel.Text = getText("status_lagging") .. " " .. string.upper(selectedTarget.Name)
+    statusLabel.TextColor3 = Color3.new(1, 0.5, 0)
+    
+    spawn(function()
+        while lagging do
+            if not selectedTarget or not selectedTarget.Parent then
+                statusLabel.Text = getText("status_target_left")
+                lagging = false
+                break
+            end
+            
+            if not selectedTarget.Character or not selectedTarget.Character:FindFirstChild("HumanoidRootPart") then
+                wait(0.5)
+                goto continue
+            end
+            
+            pcall(createMegaEffect, selectedTarget)
+            wait(0.15)
+            
+            ::continue::
+        end
+        
+        startBtn.BackgroundColor3 = Color3.new(1, 0, 0)
+        if not selectedTarget or not selectedTarget.Parent then
+            statusLabel.Text = getText("status_target_left")
+        else
+            statusLabel.Text = getText("status_stopped")
+        end
+        statusLabel.TextColor3 = Color3.new(0, 1, 0)
+        wait(1.5)
+        if not lagging then
+            statusLabel.Text = getText("status_ready")
+        end
+    end)
+end
+
+-- ========== ОЧИСТКА ==========
+local function clearAllParts()
+    local count = 0
+    for _, part in pairs(createdParts) do
+        if part and part.Parent then
+            pcall(function() part:Destroy() end)
+            count = count + 1
+        end
+    end
+    createdParts = {}
+    partsInfo.Text = getText("parts_count") .. ": 0"
+    
+    if count > 0 then
+        statusLabel.Text = getText("status_cleared") .. " " .. count .. " " .. getText("parts_count"):match("%S+$") or ""
+        statusLabel.TextColor3 = Color3.new(1, 1, 0)
+        wait(1)
+        if not lagging then
+            statusLabel.Text = getText("status_ready")
+            statusLabel.TextColor3 = Color3.new(0, 1, 0)
+        end
+    end
+    return count
+end
+
+local function stopAndClear()
+    lagging = false
+    local cleared = clearAllParts()
+    startBtn.BackgroundColor3 = Color3.new(1, 0, 0)
+    statusLabel.Text = cleared > 0 and getText("status_stopped") .. " " .. getText("status_cleared"):match("^[^%d]+") .. cleared or getText("status_stopped")
+    statusLabel.TextColor3 = Color3.new(0, 1, 0)
+    wait(1.5)
+    if not lagging then
+        statusLabel.Text = getText("status_ready")
+    end
+end
+
+-- ========== ПРОХОД ЧЕРЕЗ БЛОКИ ==========
+local function enablePassThrough()
+    noclipActive = true
+    noclipBtn.BackgroundColor3 = Color3.new(0, 0.8, 0)
+    noclipBtn.Text = getText("noclip_on")
+    
+    if selectedTarget and selectedTarget.Character then
+        for _, ourPart in pairs(createdParts) do
+            if ourPart and ourPart.Parent then
+                pcall(function()
+                    ourPart:SetAttribute("GhostFor", selectedTarget.Name)
+                end)
+            end
+        end
+        statusLabel.Text = getText("status_noclip_on")
+    else
+        statusLabel.Text = getText("status_no_target")
+    end
+    statusLabel.TextColor3 = Color3.new(0, 1, 0)
+    wait(1.5)
+    if not lagging then
+        statusLabel.Text = getText("status_ready")
+    end
+end
+
+local function disablePassThrough()
+    noclipActive = false
+    noclipBtn.BackgroundColor3 = Color3.new(0.3, 0.3, 0.8)
+    noclipBtn.Text = getText("noclip")
+    
+    if selectedTarget and selectedTarget.Character then
+        for _, ourPart in pairs(createdParts) do
+            if ourPart and ourPart.Parent then
+                pcall(function()
+                    ourPart:SetAttribute("GhostFor", nil)
+                end)
+            end
+        end
+    end
+    statusLabel.Text = getText("status_noclip_off")
+    statusLabel.TextColor3 = Color3.new(0, 1, 0)
+    wait(1.5)
+    if not lagging then
+        statusLabel.Text = getText("status_ready")
+    end
+end
+
+-- ========== ОБНОВЛЕНИЕ СПИСКА ==========
+local function updatePlayerList()
+    for _, child in pairs(playerList:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    
+    for _, plr in pairs(game.Players:GetPlayers()) do
+        if plr ~= player then
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, 0, 0, 45)
+            btn.Text = "👤 " .. plr.Name
+            btn.BackgroundColor3 = Color3.new(0.2, 0.2, 0.3)
+            btn.TextColor3 = Color3.new(1, 1, 1)
+            btn.TextScaled = true
+            btn.Parent = playerList
+            
+            btn.MouseButton1Click:Connect(function()
+                if lagging then
+                    stopAndClear()
+                end
+                
+                selectedTarget = plr
+                
+                for _, b in pairs(playerList:GetChildren()) do
+                    if b:IsA("TextButton") then
+                        b.BackgroundColor3 = Color3.new(0.2, 0.2, 0.3)
+                    end
+                end
+                btn.BackgroundColor3 = Color3.new(1, 0.2, 0.5)
+                targetLabel.Text = getText("target"):gsub("НЕ ВЫБРАНА|NOT SELECTED", string.upper(plr.Name))
+                targetLabel.Text = targetLabel.Text:gsub("🎯 ЦЕЛЬ:", "🎯 " .. getText("target"):match("^[^:]+"):gsub("🎯", "") .. ":")
+                targetLabel.Text = targetLabel.Text:gsub("TARGET:", "TARGET:")
+                targetLabel.Text = "🎯 " .. (language == "RU" and "ЦЕЛЬ: " or "TARGET: ") .. string.upper(plr.Name)
+                statusLabel.Text = getText("status_select")
+                statusLabel.TextColor3 = Color3.new(0, 1, 0)
+                
+                if noclipActive then
+                    for _, ourPart in pairs(createdParts) do
+                        if ourPart and ourPart.Parent then
+                            pcall(function()
+                                ourPart:SetAttribute("GhostFor", plr.Name)
+                            end)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end
+
+-- ========== ОБНОВЛЕНИЕ ТЕКСТА ==========
+local function updateLanguage()
+    title.Text = getText("title")
+    listTitle.Text = getText("players")
+    targetLabel.Text = "🎯 " .. (language == "RU" and "ЦЕЛЬ: " or "TARGET: ") .. (selectedTarget and string.upper(selectedTarget.Name) or (language == "RU" and "НЕ ВЫБРАНА" or "NOT SELECTED"))
+    
+    if noclipActive then
+        noclipBtn.Text = getText("noclip_on")
+    else
+        noclipBtn.Text = getText("noclip")
+    end
+    
+    settingsTitle.Text = getText("settings")
+    
+    local colorNames = {
+        getText("color_purple"),
+        getText("color_blue"),
+        getText("color_red"),
+        getText("color_cyan"),
+        getText("color_gold"),
+        getText("color_random")
+    }
+    colorBtn.Text = getText("color") .. ": " .. colorNames[currentColor]
+    
+    langBtn.Text = language == "RU" and getText("language_btn") or getText("language_ru")
+    
+    startBtn.Text = getText("start")
+    stopBtn.Text = getText("stop")
+    clearBtn.Text = getText("clear")
+    partsInfo.Text = getText("parts_count") .. ": " .. #createdParts
+    
+    if lagging then
+        statusLabel.Text = getText("status_lagging") .. " " .. (selectedTarget and string.upper(selectedTarget.Name) or "")
+    elseif #createdParts > 0 then
+        statusLabel.Text = getText("status_ready")
+    else
+        statusLabel.Text = getText("status_ready")
+    end
+end
+
+-- ========== НАСТРОЙКИ ==========
+colorBtn.MouseButton1Click:Connect(function()
+    currentColor = currentColor + 1
+    if currentColor > 6 then currentColor = 1 end
+    
+    local colorNames = {
+        getText("color_purple"),
+        getText("color_blue"),
+        getText("color_red"),
+        getText("color_cyan"),
+        getText("color_gold"),
+        getText("color_random")
+    }
+    colorBtn.Text = getText("color") .. ": " .. colorNames[currentColor]
+    
+    statusLabel.Text = language == "RU" and "🎨 Цвет изменён!" or "🎨 Color changed!"
+    statusLabel.TextColor3 = Color3.new(1, 1, 0)
+    wait(1)
+    if not lagging then
+        statusLabel.Text = getText("status_ready")
+        statusLabel.TextColor3 = Color3.new(0, 1, 0)
+    end
+end)
+
+langBtn.MouseButton1Click:Connect(function()
+    language = language == "RU" and "EN" or "RU"
+    updateLanguage()
+    statusLabel.Text = language == "RU" and "🌐 Язык изменён на Русский" or "🌐 Language changed to English"
+    statusLabel.TextColor3 = Color3.new(1, 1, 0)
+    wait(1.5)
+    if not lagging then
+        statusLabel.Text = getText("status_ready")
+        statusLabel.TextColor3 = Color3.new(0, 1, 0)
+    end
+end)
+
+-- ========== КНОПКИ ==========
+noclipBtn.MouseButton1Click:Connect(function()
+    if noclipActive then
+        disablePassThrough()
+    else
+        enablePassThrough()
+    end
+    updateLanguage()
+end)
+
+startBtn.MouseButton1Click:Connect(startLagging)
+stopBtn.MouseButton1Click:Connect(stopAndClear)
+clearBtn.MouseButton1Click:Connect(clearAllParts)
+
+-- Управление меню
+local function openMenu()
+    menuOpen = true
+    mainFrame.Visible = true
+    showBlur(0.3, 12)
+    mainFrame.BackgroundTransparency = 0.15
+end
+
+local function closeMenu()
+    menuOpen = false
+    mainFrame.Visible = false
+    hideBlur(0.3)
+end
+
+local function minimizeMenu()
+    if mainFrame.Visible then
+        closeMenu()
+    else
+        openMenu()
+    end
+end
+
+toggleButton.MouseButton1Click:Connect(minimizeMenu)
+minimizeBtn.MouseButton1Click:Connect(minimizeMenu)
+
+closeBtn.MouseButton1Click:Connect(function()
+    stopAndClear()
+    closeMenu()
+    toggleButton.Visible = false
+    wait(0.3)
+    gui:Destroy()
+end)
+
+-- События
+game.Players.PlayerAdded:Connect(updatePlayerList)
+game.Players.PlayerRemoving:Connect(function()
+    if selectedTarget and not selectedTarget.Parent then
+        selectedTarget = nil
+        targetLabel.Text = "🎯 " .. (language == "RU" and "ЦЕЛЬ: НЕ ВЫБРАНА" or "TARGET: NOT SELECTED")
+        stopAndClear()
+    end
+    updatePlayerList()
+end)
+
+-- ========== ЗАПУСК ==========
+updatePlayerList()
+openMenu()
+
+statusLabel.Text = getText("status_ready")
+statusLabel.TextColor3 = Color3.new(0, 1, 0)
+
+print("⚡ MEGA LAG MACHINE v10 ЗАПУЩЕН!")
+print("✨ ЛЕТАЮЩИЕ ЗВЁЗДЫ В МЕНЮ!")
+print("🎨 НАСТРОЙКИ ЦВЕТА!")
+print("🌐 РУССКИЙ/ENGLISH ЯЗЫК!")
